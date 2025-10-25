@@ -1,0 +1,15 @@
+# Bildverarbeitung
+opencv-python>=4.5.0
+numpy>=1.21.0
+
+# MIDI-Kommunikation
+python-rtmidi>=1.4.0
+# Alternativ: mido>=0.5.0
+
+# Optional: Benutzeroberfläche
+# tkinter (ist in Python standardmäßig enthalten)
+# PyQt5>=5.15.0
+Pillow>=9.0.0
+
+# Für Aruco-Marker (optional, für verbesserte Marker-Erkennung)
+opencv-contrib-python>=4.5.0
