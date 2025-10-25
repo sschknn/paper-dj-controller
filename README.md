@@ -27,4 +27,91 @@ Die **Paper-DJ Controller**-Anwendung ist eineOpen-Source-Software, die gedruckt
 
 ## Fehlerbehebung  
 - **Syntaxfehler in `calibration.py`**:  
-  - Linie 2 muss eine Funktion mit Doppelpunkt beenden (`def ...():`).  
+  - Linie 2 muss eine Funktion mit Doppelpunkt beenden (`def ...():`).
+ Programmier-Spezifikation: Paper-DJ-Controller (Webcam-basiert)
+1. Projektübersicht
+Ziel dieses Projekts ist die Entwicklung einer Desktop-Anwendung, die gedruckte DJ-Steuerelemente (Mixer, Turntables, MIDI-Controller) mittels einer Webcam erkennt und die erkannten Interaktionen (Tastenanschläge, Drehungen, Schiebebewegungen) in Standard-MIDI-Signale umwandelt. Diese MIDI-Signale werden an die DJ-Software Mixxx gesendet, um eine virtuelle Steuerung zu ermöglichen.
+2. Technischer Stapel
+Komponente
+Technologie
+Zweck
+Hauptsprache
+Python
+Gesamtsteuerung und Modulkoordination.
+Bildverarbeitung
+OpenCV (cv2)
+Kamerazugriff, Kalibrierung, Objekterkennung (Formen/Marker), Perspektivkorrektur.
+MIDI-Kommunikation
+python-rtmidi oder mido
+Erstellung eines virtuellen MIDI-Ports zur Kommunikation mit Mixxx.
+Benutzeroberfläche (Optional)
+Tkinter / PyQt
+Einfache UI für Kalibrierung und Statusanzeige.
+
+3. Hardware- und Setup-Anforderungen
+Druckvorlagen: DIN A4 Ausdrucke der Steuerelemente (Mixer, 2 Turntables, MIDI-Controller). Wichtig: Die Vorlagen müssen eindeutige, kontrastreiche Marker (z. B. Aruco-Marker oder große, farbige Kreise) in den Ecken oder an wichtigen Kontrollpunkten enthalten, um eine korrekte Kalibrierung zu ermöglichen.
+Webcam: Eine hochauflösende Webcam, die stabil über der Arbeitsfläche positioniert werden kann (idealerweise von oben, um Verzerrungen zu minimieren).
+Beleuchtung: Gleichmäßige Beleuchtung, um Schattenwürfe bei Interaktion (Finger) deutlich hervorzuheben.
+4. Modulbeschreibung und Kernfunktionalität
+4.1. Kameramodul (Camera Capture)
+Funktion: Initialisiert die Webcam und liest kontinuierlich Frames (Bilder) ein.
+Aufgabe: Bereitstellung eines aktuellen Video-Feeds für das Bildverarbeitungsmodul.
+4.2. Kalibrierungs- & Korrekturmodul (Calibration & Correction)
+Dieses Modul ist entscheidend und muss zu Beginn einmalig durch den Benutzer ausgeführt werden.
+Marker-Erkennung: Identifiziert die 4 Eckmarker der DIN A4 Vorlage mithilfe von OpenCV (z. B. einfache Farberkennung oder Aruco-Marker).
+Perspektivkorrektur (Homographie): Wendet eine mathematische Transformation (Homographie) an, um das verzerrte Kamerabild in eine perfekte Top-Down-Ansicht (Vogelperspektive) der DIN A4 Vorlage umzuwandeln. Dadurch werden Verzerrungen durch den Kamerawinkel korrigiert.
+ROI-Definition (Region of Interest): Basierend auf der korrigierten Ansicht werden die genauen Pixelkoordinaten für jedes Steuerelement (Taste, Regler, Plattenteller) definiert und gespeichert.
+4.3. Interaktions-Tracking-Modul (Interaction Tracking)
+Dieses Modul verarbeitet den korrigierten Frame und erkennt Benutzeraktionen.
+A. Tasten/Pads (Buttons/Pads)
+Erkennungsmethode: Schwellenwert-Differenzanalyse (Thresholding).
+Ablauf:
+Berechne den durchschnittlichen Helligkeitswert (Graustufen) der ROI, wenn die Taste unberührt ist (Referenzwert).
+Überwache den Live-Helligkeitswert.
+Wenn der Live-Wert unter einen bestimmten Schwellenwert fällt (typischerweise durch den Schatten/die Abdeckung des Fingers), registriere dies als Tastenanschlag.
+Sobald der Wert den Referenzwert wieder erreicht, registriere dies als Loslassen.
+B. Drehregler (Knobs)
+Druckvorlage: Der Regler muss ein gedrucktes Radialmuster oder eine zentrale Markierung haben.
+Erkennungsmethode: Analyse des Helligkeitszentrums / optischer Fluss.
+Ablauf:
+Definiere den Mittelpunkt des Reglers (ROI).
+Berechne den aktuellen Winkel des Fingers/der Markierung relativ zum Mittelpunkt.
+Wenn sich der Winkel ändert, sende entsprechende "Pitch Bend"- oder "Continuous Controller (CC)"-MIDI-Nachrichten.
+Eine Änderung von > 5 Grad entspricht einer Wertsteigerung (+1) oder Wertminderung (-1).
+C. Schieberegler/Fader (Faders)
+Druckvorlage: Eine deutliche Linie (Faderbahn) mit einem eindeutigen Fadergriff (Marker).
+Erkennungsmethode: Verfolgung des Marker-Schwerpunkts (Centroid Tracking).
+Ablauf:
+Erkenne den Schwerpunkt (X, Y) des Fader-Markers.
+Da der Fader nur entlang einer Achse (z. B. der Y-Achse für Crossfader) bewegt wird, nutze die Y-Koordinate, um einen Wert zwischen 0 und 127 zu berechnen.
+Sende diesen Wert als CC-MIDI-Nachricht.
+D. Plattenteller (Turntables)
+Druckvorlage: Ein Plattenteller-Kreis mit einem kontrastreichen Muster (z. B. Linien).
+Erkennungsmethode: Optischer Fluss oder Rotationserkennung.
+Ablauf:
+Erkenne die Rotation des Musters innerhalb der ROI.
+Eine schnelle Rotation (Scratchen) oder eine langsame (Pitch Bending) wird in entsprechende MIDI-Nachrichten für "Jog Wheel" oder "Scratch" umgesetzt.
+4.4. MIDI-Steuerungsmodul (MIDI Control)
+Funktion: Verwaltet die Kommunikation zwischen dem Interaktions-Tracking-Modul und Mixxx.
+Ablauf:
+Initialisiere einen virtuellen MIDI-Port (z. B. "PaperDJ-Controller").
+Mappe jede erkannte Interaktion auf eine Standard-MIDI-Nachricht:
+Tasten: Note On (127), Note Off (0).
+Regler/Fader: Continuous Controller (CC), Wert 0-127.
+Sende die entsprechenden MIDI-Befehle, wenn eine Aktion erkannt wird.
+5. Benutzer-Workflow (Einrichtung und Nutzung)
+Vorbereitung: Der Benutzer druckt die Steuervorlagen (mit Markern) aus und legt sie flach auf den Tisch.
+App-Start: Der Benutzer startet die "Paper-DJ-Controller"-Anwendung.
+Kalibrierung:
+Die Anwendung zeigt den Live-Kamera-Feed an.
+Der Benutzer klickt auf einen "Kalibrieren"-Button.
+Die Anwendung identifiziert automatisch die vier Eckmarker.
+Die Anwendung zeigt den korrigierten (Top-Down) Frame zur Bestätigung an.
+Zuordnung (Mapping):
+Der Benutzer muss in Mixxx das virtuelle MIDI-Gerät ("PaperDJ-Controller") als Controller hinzufügen.
+Der Benutzer weist die empfangenen MIDI-Nachrichten den Mixxx-Funktionen zu (z. B. MIDI CC#10 auf den Crossfader).
+Performance:
+Die Anwendung startet das Echtzeit-Interaktions-Tracking.
+Der Benutzer kann die gedruckten Steuerelemente drücken, drehen oder schieben. Die Webcam erkennt die Interaktionen und die Anwendung steuert Mixxx.
+
+  - 
