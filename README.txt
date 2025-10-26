@@ -1,5 +1,4 @@
-[![Paper Dj Mixxx – Video-Vorschau](https://img.youtube.com/vi/5h3dG5mnVWE/hqdefault.jpg)](http://www.youtube.com/watch?v=5h3dG5mnVWE)
-
+https://youtube.com/shorts/5h3dG5mnVWE?si=AQis6Tok1kisC__B
 
 # Paper-DJ Controller  
 
